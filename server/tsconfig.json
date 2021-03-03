@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"allowJs": true,
+		"target": "esnext",
+		"lib": ["ESNext"],
+		"moduleResolution": "Node",
+		"baseUrl": ".",
+		"module": "ESNext",
+		"noImplicitAny": true,
+		"sourceMap": true,
+		"allowSyntheticDefaultImports": true,
+		"outDir": "dist",
+		"typeRoots": ["@types"],
+		"strict": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"alwaysStrict": true
+	},
+	"compileOnSave": false,
+	"exclude": ["./node_modules", "./dist", "./scripts"]
+}

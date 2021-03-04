@@ -1,35 +1,51 @@
-import { NextFunction, Request, Router } from 'express';
-import { findOneUser } from 'src/database';
-import { JWTSecret } from 'src/keys/keys';
-import { sign } from 'jsonwebtoken';
-import { UserData, UserRequest, UserRequestBody } from './User';
-import { handleRouteErrors } from 'src/errorHandlers';
+import { NextFunction, Request, Router, Response } from 'express';
+import { findOneUser } from '../database.js';
+import { JWTSecret } from '../keys/keys.js';
+import JWT from 'jsonwebtoken';
+import { UserData, UserRequestBody } from './User.js';
+import { handleRouteErrors } from '../errorHandlers.js';
 import { compare } from 'bcrypt';
-import { Response } from 'express';
 
-type TokenResponse = Response<{ token?: string }>;
+const TokenStore: Record<string, boolean> = {};
 
-type AuthRequest = Request<any, any, UserRequestBody>;
-type LoginRequest = AuthRequest & { user?: UserData };
+const asyncVerify = (token: string, secret = JWTSecret): Promise<DeserializedUser> =>
+	new Promise(res =>
+		JWT.verify(token, secret, (err, data) => {
+			if (err) throw 'Forbidden';
+			if (!data) throw 'empty token';
+			res(data as DeserializedUser);
+		})
+	);
 
-const genToken = (user: UserData) => {
+const genAccessToken = (email: string) => {
 	const JWTPayload = {
-		id: user.email,
+		email,
 	};
 
-	return sign(JWTPayload, JWTSecret, {
-		expiresIn: '1h',
+	return JWT.sign(JWTPayload, JWTSecret, {
+		expiresIn: '10s',
 	});
 };
 
-const authenticate = async (req: LoginRequest, res: Request, next: NextFunction) => {
-	if (req.user || !req.body.user?.email || !req.body.user.password) next();
+const genRefreshToken = (email: string) => {
+	const JWTPayload = {
+		email,
+	};
 
-	const user = await findOneUser({ email: req.body.user?.email });
+	return JWT.sign(JWTPayload, JWTSecret);
+};
+
+const authenticate = async (req: ToAuthReq, res: Response<{}>, next: NextFunction) => {
+	if (!req.body.user?.email || !req.body.user.password) return next();
+
+	const user = await findOneUser({
+		email: req.body.user.email,
+		password: req.body.user.password,
+	});
 
 	if (!user) return next();
 
-	const isUser = await compare(req.body.user?.password, user.hash);
+	const isUser = await compare(req.body.user.password, user.hash);
 
 	if (!isUser) return next();
 
@@ -40,35 +56,77 @@ const authenticate = async (req: LoginRequest, res: Request, next: NextFunction)
 
 const router = Router();
 
-router.get('login', async (req: LoginRequest, res: TokenResponse) => {
-	try {
-		if (req.user) throw 'You are already logged in - cannot log in twice';
+router.post('/login', authenticate, (req: AuthedReq, res: LoginRes) => {
+	if (!req.user) return handleRouteErrors(res, "Couldn't authenticate user");
 
-		if (!req.body.user?.email || !req.body.user.password)
-			throw 'Not enough information to be able to log in';
-		res.send({ token: genToken(user) });
+	const refreshToken = genRefreshToken(req.user.email);
+
+	TokenStore[refreshToken] = true;
+
+	res.send({
+		type: 'success',
+		accessToken: genAccessToken(req.user.email),
+		refreshToken,
+	});
+});
+
+router.post('/logout', (req: LogoutReq, res: Response<BaseResponseData>) => {
+	if (!req.body.refreshToken)
+		return handleRouteErrors(res, "Can't logout without refreshToken.");
+
+	if (TokenStore[req.body.refreshToken] === undefined)
+		return handleRouteErrors(res, 'No user with such Refresh Token exists.');
+
+	delete TokenStore[req.body.refreshToken];
+	res.send({ type: 'success' });
+});
+
+router.post('/token', async (req: RefreshTokenReq, res: RefreshTokenRes) => {
+	try {
+		const refreshToken = req.body.token;
+
+		if (!refreshToken) throw 'No token provided.';
+		if (TokenStore[refreshToken] === undefined) throw "Token doesn't exist in the store.";
+
+		const user = await asyncVerify(refreshToken);
+
+		res.send({ type: 'success', accessToken: genRefreshToken(user.email) });
 	} catch (e) {
 		handleRouteErrors(res, e);
 	}
 });
 
-router.route('logout').get(async (req: AuthRequest, res: TokenResponse) => {
+// Keep everything after this in business logic server, rest above can be extracted into a separate Auth Server
+
+export const authenticateToken = async (req: AuthedReq, res: Response) => {
 	try {
-		if (!req.body.user?.email || !req.body.user.password)
-			throw 'Not enough information to be able to log in';
+		const authToken = req.headers.authorization?.split(' ')[1];
+		if (!authToken) throw 'Can not authenticate token.';
 
-		const user = await findOneUser({ email: req.body.user?.email });
+		const { email } = await asyncVerify(authToken);
 
-		if (!user) throw `No user with email: ${req.body.user?.email} found.`;
+		const user = await findOneUser({ email });
+		if (!user) throw 'No user';
 
-		const isUser = await compare(req.body.user.password, user.hash);
-
-		if (!isUser) throw 'Wrong email or password.';
-
-		res.send({ token: genToken(user) });
+		req.user = user;
 	} catch (e) {
 		handleRouteErrors(res, e);
 	}
-});
+};
 
 export default router;
+
+type BaseResponseData = { type: 'success' } | { type: 'failure'; message: string };
+export type BaseResponse<T = Record<string, unknown>> = Response<BaseResponseData & T>;
+
+type LoginRes = Response<
+	BaseResponseData & { accessToken: string; refreshToken: string }
+>;
+type RefreshTokenRes = Response<BaseResponseData & { accessToken: string }>;
+
+type DeserializedUser = { email: string };
+
+type ToAuthReq = Request<any, any, UserRequestBody> & { user?: UserData };
+export type AuthedReq = Request & { user?: DeserializedUser };
+type LogoutReq = Request<any, any, { refreshToken?: string }>;
+type RefreshTokenReq = Request<any, any, { token?: string }>;

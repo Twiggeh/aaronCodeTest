@@ -1,0 +1,74 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Start Webpack",
+			"console": "integratedTerminal",
+			"program": "${workspaceFolder}/client/scripts/debug.js",
+			"request": "launch",
+			"runtimeExecutable": "node",
+			"skipFiles": ["<node_internals>/**"],
+			"type": "pwa-node"
+		},
+		{
+			"name": "Launch Chrome",
+			"sourceMaps": true,
+			"outFiles": ["./client/public/js/*.js", "!**/node_modules/**"],
+			"request": "launch",
+			"type": "pwa-chrome",
+			"url": "http://localhost:5000",
+			"webRoot": "${workspaceFolder}/client"
+		},
+		{
+			"console": "internalConsole",
+			"name": "Server Nodemon",
+			"cwd": "${workspaceFolder}/server",
+			"program": "${workspaceFolder}/server/dist/app.js",
+			"request": "launch",
+			"restart": true,
+			"runtimeExecutable": "nodemon",
+			"skipFiles": ["<node_internals>/**"],
+			"type": "pwa-node"
+		},
+		{
+			"command": "tsc -w",
+			"name": "Server Compiler",
+			"request": "launch",
+			"type": "node-terminal",
+			"cwd": "${workspaceFolder}/server"
+		},
+		{
+			"type": "pwa-chrome",
+			"request": "attach",
+			"name": "Attach to Chrome",
+			"port": 9999,
+			"webRoot": "${workspaceFolder}/client",
+			"sourceMaps": true,
+			"skipFiles": ["cypress_runner.js"]
+		},
+		{
+			"name": "TSC Watcher Client",
+			"command": "tsc --noEmit -w",
+			"cwd": "${workspaceFolder}/client",
+			"request": "launch",
+			"type": "node-terminal",
+			"internalConsoleOptions": "neverOpen"
+		}
+	],
+	"compounds": [
+		{
+			"name": "start Development",
+			"configurations": [
+				"Server Nodemon",
+				"Start Webpack",
+				"Launch Chrome",
+				"TSC Watcher Client",
+				"Server Compiler"
+			],
+			"stopAll": true
+		}
+	]
+}

@@ -1,49 +1,95 @@
 import { Router } from 'express';
-import { findOneUser } from 'src/database';
-import { JWTSecret } from 'src/keys/keys';
-import { sign } from 'jsonwebtoken';
-import { handleRouteErrors } from 'src/errorHandlers';
+import { findOneUser } from '../database.js';
+import { JWTSecret } from '../keys/keys.js';
+import JWT from 'jsonwebtoken';
+import { handleRouteErrors } from '../errorHandlers.js';
 import { compare } from 'bcrypt';
-const genToken = (user) => {
+const TokenStore = {};
+const asyncVerify = (token, secret = JWTSecret) => new Promise(res => JWT.verify(token, secret, (err, data) => {
+    if (err)
+        throw 'Forbidden';
+    if (!data)
+        throw 'empty token';
+    res(data);
+}));
+const genAccessToken = (email) => {
     const JWTPayload = {
-        id: user.email,
+        email,
     };
-    return sign(JWTPayload, JWTSecret, {
-        expiresIn: '1h',
+    return JWT.sign(JWTPayload, JWTSecret, {
+        expiresIn: '10s',
     });
 };
+const genRefreshToken = (email) => {
+    const JWTPayload = {
+        email,
+    };
+    return JWT.sign(JWTPayload, JWTSecret);
+};
+const authenticate = async (req, res, next) => {
+    if (!req.body.user?.email || !req.body.user.password)
+        return next();
+    const user = await findOneUser({
+        email: req.body.user.email,
+        password: req.body.user.password,
+    });
+    if (!user)
+        return next();
+    const isUser = await compare(req.body.user.password, user.hash);
+    if (!isUser)
+        return next();
+    req.user = user;
+    next();
+};
 const router = Router();
-router.get('login', async (req, res) => {
+router.post('/login', authenticate, (req, res) => {
+    if (!req.user)
+        return handleRouteErrors(res, "Couldn't authenticate user");
+    const refreshToken = genRefreshToken(req.user.email);
+    TokenStore[refreshToken] = true;
+    res.send({
+        type: 'success',
+        accessToken: genAccessToken(req.user.email),
+        refreshToken,
+    });
+});
+router.post('/logout', (req, res) => {
+    if (!req.body.refreshToken)
+        return handleRouteErrors(res, "Can't logout without refreshToken.");
+    if (TokenStore[req.body.refreshToken] === undefined)
+        return handleRouteErrors(res, 'No user with such Refresh Token exists.');
+    delete TokenStore[req.body.refreshToken];
+    res.send({ type: 'success' });
+});
+router.post('/token', async (req, res) => {
     try {
-        if (!req.body.user?.email || !req.body.user.password)
-            throw 'Not enough information to be able to log in';
-        const user = await findOneUser({ email: req.body.user?.email });
-        if (!user)
-            throw `No user with email: ${req.body.user?.email} found.`;
-        const isUser = await compare(req.body.user.password, user.hash);
-        if (!isUser)
-            throw 'Wrong email or password.';
-        res.send({ token: genToken(user) });
+        const refreshToken = req.body.token;
+        if (!refreshToken)
+            throw 'No token provided.';
+        if (TokenStore[refreshToken] === undefined)
+            throw "Token doesn't exist in the store.";
+        const user = await asyncVerify(refreshToken);
+        res.send({ type: 'success', accessToken: genRefreshToken(user.email) });
     }
     catch (e) {
         handleRouteErrors(res, e);
     }
 });
-router.route('logout').get(async (req, res) => {
+// Keep everything after this in business logic server, rest above can be extracted into a separate Auth Server
+export const authenticateToken = async (req, res) => {
     try {
-        if (!req.body.user?.email || !req.body.user.password)
-            throw 'Not enough information to be able to log in';
-        const user = await findOneUser({ email: req.body.user?.email });
+        const authToken = req.headers.authorization?.split(' ')[1];
+        if (!authToken)
+            throw 'Can not authenticate token.';
+        const { email } = await asyncVerify(authToken);
+        const user = await findOneUser({ email });
         if (!user)
-            throw `No user with email: ${req.body.user?.email} found.`;
-        const isUser = await compare(req.body.user.password, user.hash);
-        if (!isUser)
-            throw 'Wrong email or password.';
-        res.send({ token: genToken(user) });
+            throw 'No user';
+        req.user = user;
     }
     catch (e) {
         handleRouteErrors(res, e);
     }
-});
+};
 export default router;
 //# sourceMappingURL=Auth.js.map

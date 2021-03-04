@@ -2,12 +2,12 @@ import { hash, genSalt } from 'bcrypt';
 import { UserData } from './routes/User';
 import type { NewData } from './types';
 
-const standardSalt = async () => genSalt(9);
+const standardSalt = async () => await genSalt(9);
 
 export const DB: Record<string, { email: string; hash: string }> = {
 	twiggeh: {
-		email: 'twiggeh',
-		hash: '1234',
+		email: 'email@email.com',
+		hash: '$2b$09$W418PL7zxfr/VzT81cD3seK8FkQNw0NFPbmTrt9tPRnaubZhUw7WG',
 	},
 };
 

@@ -1,13 +1,15 @@
 // Libraries
 import express from 'express';
 import cors from 'cors';
-import { join, dirname } from 'path';
+import { dirname } from 'path';
 import { URL } from 'url';
 
 const PORT = 5050;
 
 // Routes
 import UserRoute from './routes/User.js';
+import AuthRoutes from './routes/Auth.js';
+import ProfileRoutes from './routes/Profile.js';
 
 const __dirname = decodeURI(dirname(new URL(import.meta.url).pathname));
 
@@ -16,7 +18,7 @@ const app = express();
 // Configure CORS
 const allowedOrigins: (string | undefined)[] = [
 	'localhost',
-	'http://localhost:5050',
+	'localhost:5050',
 	'http://localhost:5000',
 	'http://127.0.0.1:5050',
 	undefined,
@@ -47,17 +49,20 @@ app.use((req, res, next) => {
 	res.header('X-Frame-Options', 'deny');
 	res.header('X-Content-Type-Options', 'nosniff');
 	res.header('Access-Control-Allow-Credentials', 'true');
-	res.header('Access-Control-Allow-Origin', 'localhost:5000');
+	// TODO : make depend on SERVER URL
+	res.header('Access-Control-Allow-Origin', 'http://localhost:5000');
 	next();
 });
 
 // Routes
 
-app.use('/v1/', UserRoute);
+app.use('/v1', UserRoute);
+app.use('/v1', AuthRoutes);
+app.use('/v1', ProfileRoutes);
 
-app.get('*', (req, res) => {
-	res.sendFile(join(__dirname, '../../client/dist/index.html'));
-});
+// app.get('*', (req, res) => {
+// 	res.sendFile(join(__dirname, '../../client/dist/index.html'));
+// });
 
 // Start Server
 

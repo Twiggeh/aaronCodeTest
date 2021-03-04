@@ -7,11 +7,11 @@ router
     .get(async (req, res) => {
     try {
         const user = await findOneUser({
-            email: req.body.email,
-            password: req.body.password,
+            email: req.body.user?.email,
+            password: req.body.user?.password,
         });
         if (!user)
-            throw `Could not find a user with this email ${req.body.email}`;
+            throw `Could not find a user with this email ${req.body.user?.email}`;
         return res.send({ user: { email: user.email } });
     }
     catch (e) {

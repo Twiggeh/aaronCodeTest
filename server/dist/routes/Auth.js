@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { findOneUser } from '../database.js';
-import { JWTSecret } from '../keys/keys.js';
+const JWTSecret = '1234'; // PUT INTO KEYS
 import JWT from 'jsonwebtoken';
 import { handleRouteErrors } from '../errorHandlers.js';
 import { compare } from 'bcrypt';

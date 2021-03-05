@@ -1,11 +1,10 @@
 import { NextFunction, Request, Router, Response } from 'express';
 import { findOneUser } from '../database.js';
-import { JWTSecret } from '../keys/keys.js';
+const JWTSecret = '1234'; // PUT INTO KEYS
 import JWT from 'jsonwebtoken';
 import { UserData, UserRequestBody } from './User.js';
 import { handleRouteErrors } from '../errorHandlers.js';
 import { compare } from 'bcrypt';
-import { isNamedExportBindings } from 'typescript';
 
 const TokenStore: Record<string, boolean> = {};
 

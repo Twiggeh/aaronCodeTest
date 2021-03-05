@@ -17,7 +17,7 @@ const genAccessToken = (email) => {
         email,
     };
     return JWT.sign(JWTPayload, JWTSecret, {
-        expiresIn: '10s',
+        expiresIn: '40s',
     });
 };
 const genRefreshToken = (email) => {
@@ -69,14 +69,14 @@ router.post('/token', async (req, res) => {
         if (TokenStore[refreshToken] === undefined)
             throw "Token doesn't exist in the store.";
         const user = await asyncVerify(refreshToken);
-        res.send({ type: 'success', accessToken: genRefreshToken(user.email) });
+        res.send({ type: 'success', accessToken: genAccessToken(user.email) });
     }
     catch (e) {
         handleRouteErrors(res, e);
     }
 });
 // Keep everything after this in business logic server, rest above can be extracted into a separate Auth Server
-export const authenticateToken = async (req, res) => {
+export const authenticateToken = async (req, res, next) => {
     try {
         const authToken = req.headers.authorization?.split(' ')[1];
         if (!authToken)
@@ -86,6 +86,7 @@ export const authenticateToken = async (req, res) => {
         if (!user)
             throw 'No user';
         req.user = user;
+        next();
     }
     catch (e) {
         handleRouteErrors(res, e);

@@ -1,7 +1,7 @@
 import { hash, genSalt } from 'bcrypt';
 const standardSalt = async () => await genSalt(9);
 export const DB = {
-    twiggeh: {
+    'email@email.com': {
         email: 'email@email.com',
         hash: '$2b$09$W418PL7zxfr/VzT81cD3seK8FkQNw0NFPbmTrt9tPRnaubZhUw7WG',
     },

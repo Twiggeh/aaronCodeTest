@@ -18,20 +18,12 @@ const curProcess = process.cwd();
 module.exports = {
 	entry: {
 		main: path.resolve(curProcess, 'src/index.js'),
-		vendor: [
-			'react',
-			'react-dom',
-			'scheduler',
-			'object-assign',
-			'@emotion/styled',
-			'prop-types',
-		],
+		vendor: ['react', 'react-dom', 'scheduler', 'object-assign', '@emotion/styled'],
 	},
 	output: {
-		path: path.resolve(curProcess, './dist'),
 		publicPath: '/',
-		filename: 'public/js/[name]-[contentHash:8].js',
-		chunkFilename: 'public/js/[name]-[contentHash:8].chunk.js',
+		filename: 'public/js/[name]_[contenthash:8].js',
+		chunkFilename: 'public/js/[name]_[contenthash:8].chunk.js',
 	},
 	mode: 'production',
 	module: {
@@ -82,7 +74,7 @@ module.exports = {
 				},
 			},
 			{
-				test: /\.css$/i,
+				test: /\.css?$/i,
 				use: [
 					{
 						loader: MiniCssExtractPlugin.loader,
@@ -93,7 +85,7 @@ module.exports = {
 					{
 						loader: 'css-loader',
 						options: {
-							sourceMap: true,
+							sourceMap: false,
 						},
 					},
 				],
@@ -115,7 +107,7 @@ module.exports = {
 				use: {
 					loader: 'file-loader',
 					options: {
-						name: '[name]-[contentHash:8].[ext]',
+						name: '[name]_[contenthash:8].[ext]',
 						outputPath: 'public/images/',
 					},
 				},
@@ -125,7 +117,7 @@ module.exports = {
 				use: {
 					loader: 'file-loader',
 					options: {
-						name: '[name]-[contentHash:8].[ext]',
+						name: '[name]_[contenthash:8].[ext]',
 						outputPath: 'public/gif/',
 					},
 				},
@@ -135,7 +127,7 @@ module.exports = {
 				use: {
 					loader: 'file-loader',
 					options: {
-						name: '[name]-[contentHash:8].[ext]',
+						name: '[name]_[contenthash:8].[ext]',
 						outputPath: 'public/video/',
 					},
 				},
@@ -145,7 +137,7 @@ module.exports = {
 				use: {
 					loader: 'file-loader',
 					options: {
-						name: '[contentHash:3]-[name].[ext]',
+						name: '[contenthash:3]_[name].[ext]',
 						outputPath: 'public/pdf/',
 					},
 				},
@@ -177,10 +169,11 @@ module.exports = {
 		extensions: ['.ts', '.tsx', '.js', '.jsx'],
 	},
 	optimization: {
-		minimizer: [new OptimizeCssAssetsPlugin()],
+		//minimizer: [new OptimizeCssAssetsPlugin()],
 		splitChunks: {
+			chunks: 'all',
 			cacheGroups: {
-				vendor: {
+				defaultVendors: {
 					chunks: 'initial',
 					test: 'vendor',
 					name: 'vendor',
@@ -198,16 +191,15 @@ module.exports = {
 			: false,
 		// Find a new minifier, uglify js doesn't support es6 syntax, which is what ts compiles down to
 		// alternatively set a different js version with babel
-		// new UglifyJSPlugin(),
+		new UglifyJSPlugin(),
 		new MiniCssExtractPlugin({
-			filename: 'public/css/[name]-[contenthash:8].css',
-			chunkFilename: 'public/css/[name]-[contenthash:8].chunk.css',
+			filename: 'public/css/[name]_[contenthash:8].css',
+			chunkFilename: 'public/css/[name]_[contenthash:8].chunk.css',
 		}),
 		new HtmlWebpackPlugin({
 			template: path.resolve(curProcess, 'src/index.html'),
 			filename: 'index.html',
-		}),
-		new CleanWebpackPlugin(),
+		}),	new CleanWebpackPlugin(),
 		new webpack.DefinePlugin({
 			BACKEND_URL: JSON.stringify(process.env.BACKEND_URL),
 		}),

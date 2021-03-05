@@ -5,6 +5,7 @@ import JWT from 'jsonwebtoken';
 import { UserData, UserRequestBody } from './User.js';
 import { handleRouteErrors } from '../errorHandlers.js';
 import { compare } from 'bcrypt';
+import { isNamedExportBindings } from 'typescript';
 
 const TokenStore: Record<string, boolean> = {};
 
@@ -23,7 +24,7 @@ const genAccessToken = (email: string) => {
 	};
 
 	return JWT.sign(JWTPayload, JWTSecret, {
-		expiresIn: '10s',
+		expiresIn: '40s',
 	});
 };
 
@@ -90,7 +91,7 @@ router.post('/token', async (req: RefreshTokenReq, res: RefreshTokenRes) => {
 
 		const user = await asyncVerify(refreshToken);
 
-		res.send({ type: 'success', accessToken: genRefreshToken(user.email) });
+		res.send({ type: 'success', accessToken: genAccessToken(user.email) });
 	} catch (e) {
 		handleRouteErrors(res, e);
 	}
@@ -98,7 +99,11 @@ router.post('/token', async (req: RefreshTokenReq, res: RefreshTokenRes) => {
 
 // Keep everything after this in business logic server, rest above can be extracted into a separate Auth Server
 
-export const authenticateToken = async (req: AuthedReq, res: Response) => {
+export const authenticateToken = async (
+	req: AuthedReq,
+	res: Response,
+	next: NextFunction
+) => {
 	try {
 		const authToken = req.headers.authorization?.split(' ')[1];
 		if (!authToken) throw 'Can not authenticate token.';
@@ -109,6 +114,7 @@ export const authenticateToken = async (req: AuthedReq, res: Response) => {
 		if (!user) throw 'No user';
 
 		req.user = user;
+		next();
 	} catch (e) {
 		handleRouteErrors(res, e);
 	}

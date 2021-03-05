@@ -11,11 +11,10 @@ const Profile = () => {
 
 	const history = useHistory();
 
+	// TODO:  Move into the getter of accessToken on  UserCTX
 	const JWTExpired = accessToken && parseJWT(accessToken)?.exp;
 
-	// TODO:  Move into the getter of accessToken on  UserCTX
-
-	const needsUpdating = typeof JWTExpired === 'number' && JWTExpired < Date.now();
+	const needsUpdating = typeof JWTExpired === 'number' && JWTExpired * 1000 < Date.now();
 
 	useEffect(() => {
 		if (needsUpdating) updateAccess();
@@ -31,10 +30,11 @@ const Profile = () => {
 		fetchOptions: {
 			method: 'POST',
 			headers: { Authorization: `Bearer ${accessToken}` },
+			mode: 'cors',
 		},
 		callbacks: {
 			successCb: res => {
-				if (res.type === 'success') setSecretMessage(res.message);
+				setSecretMessage(res.message);
 			},
 		},
 	});
@@ -49,9 +49,8 @@ const Profile = () => {
 		<>
 			{loading ? 'loading ...' : null}
 			{JSON.stringify(error)}
-			{secretMessage}
 			<div>Email: {user.email}</div>
-			<div>Super Secret Data: </div>
+			<div>Super Secret Data: {secretMessage}</div>
 		</>
 	);
 };

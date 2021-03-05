@@ -1,7 +1,7 @@
 // Libraries
 import express from 'express';
 import cors from 'cors';
-import { dirname } from 'path';
+import { dirname, join } from 'path';
 import { URL } from 'url';
 const PORT = 5050;
 // Routes
@@ -12,8 +12,7 @@ const __dirname = decodeURI(dirname(new URL(import.meta.url).pathname));
 const app = express();
 // Configure CORS
 const allowedOrigins = [
-    'localhost',
-    'localhost:5050',
+    'http://localhost:5050',
     'http://localhost:5000',
     'http://127.0.0.1:5050',
     undefined,
@@ -47,9 +46,12 @@ app.use((req, res, next) => {
 app.use('/v1', UserRoute);
 app.use('/v1', AuthRoutes);
 app.use('/v1', ProfileRoutes);
-// app.get('*', (req, res) => {
-// 	res.sendFile(join(__dirname, '../../client/dist/index.html'));
-// });
+app.get('/public/*', (req, res) => {
+    res.sendFile(join(__dirname, '../../client/dist', req.url));
+});
+app.get('*', (req, res) => {
+    res.sendFile(join(__dirname, '../../client/dist/index.html'));
+});
 // Start Server
 app.listen(PORT, () => {
     console.log(`Dev server is listening on port ${PORT}`);

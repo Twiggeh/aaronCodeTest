@@ -27,23 +27,31 @@ export const useUser = (): UserCtx => {
 	);
 
 	useFetch<
-		| { type: 'success'; body: { accessToken: string } }
-		| { type: 'failure'; message: string }
+		{ type: 'success'; accessToken: string } | { type: 'failure'; message: string }
 	>(SERVERURL + '/v1/token', {
 		hookOptions: {
 			condition: updateAccessCondition,
 		},
 		fetchOptions: {
 			method: 'POST',
+			mode: 'cors',
 			body: JSON.stringify({
 				token: refreshToken,
 			}),
+			headers: {
+				'Content-Type': 'application/json',
+			},
 		},
 		callbacks: {
 			successCb: res => {
 				if (res.type === 'success') {
-					setAccessToken(res.body.accessToken);
+					setAccessToken(res.accessToken);
 					_updateAccess(false);
+				}
+				if (res.type === 'failure') {
+					setUser(undefined);
+					setRefreshToken(undefined);
+					setAccessToken(undefined);
 				}
 			},
 			finalCb: () => _updateAccess(false),
